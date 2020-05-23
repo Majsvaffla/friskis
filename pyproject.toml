@@ -9,6 +9,7 @@ python = "^3.6"
 click = "^7.1.1"
 requests = "^2.23.0"
 pytz = "^2019.3"
+python-dateutil = "^2.8.1"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.2"
