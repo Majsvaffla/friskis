@@ -244,6 +244,7 @@ def remove(name, location=None, weekday=None):
 
 @friskis.command()
 def book():
+    now = datetime.now(STOCKHOLM_TIMEZONE)
     authorization = _login()
     existing_bookings = _get_bookings(authorization)
     for event in _get_schedule():
