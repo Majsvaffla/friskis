@@ -261,7 +261,7 @@ def book():
             click.echo(f"{group_activity_name} på {location} är inställt {formatted_group_activity_date}")
 
         bookable_earliest = _parse_datetime(group_activity["bookableEarliest"])
-        already_booked = group_activity in [booking["groupActivity"] for booking in existing_bookings]
+        already_booked = group_activity["id"] in [booking["groupActivity"]["id"] for booking in existing_bookings]
         if now < bookable_earliest or already_booked:
             continue
 
