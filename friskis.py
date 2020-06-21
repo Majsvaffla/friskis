@@ -46,6 +46,10 @@ def _format_datetime(dt, delimiter=" ", tz=STOCKHOLM_TIMEZONE, seconds=False):
     return f"{date_string}{delimiter}{time_string}"
 
 
+def _strip_weekday_plural(ctx, weekday):
+    return weekday[:-2] if weekday.endswith("ar") else weekday
+
+
 def _get_weekday_number(weekday):
     return WEEKDAYS.index(weekday) + 1
 
@@ -176,7 +180,7 @@ def list():
 @friskis.command()
 @click.argument("name")
 @click.argument("location")
-@click.argument("weekday")
+@click.argument("weekday", callback=_strip_weekday_plural)
 def add(name, location, weekday):
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday)
@@ -202,7 +206,7 @@ def add(name, location, weekday):
 @friskis.command()
 @click.argument("name")
 @click.argument("location", required=False)
-@click.argument("weekday", required=False)
+@click.argument("weekday", required=False, callback=_strip_weekday_plural)
 def remove(name, location=None, weekday=None):
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday) if weekday else None
