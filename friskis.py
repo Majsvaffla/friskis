@@ -46,6 +46,35 @@ def _format_datetime(dt, delimiter=" ", tz=STOCKHOLM_TIMEZONE, seconds=False):
     return f"{date_string}{delimiter}{time_string}"
 
 
+def _format_name(name):
+    return name.title()
+
+
+def _format_location(location):
+    return location.title()
+
+
+def _pluralize_weekday(weekday):
+    return f"{weekday}ar" if not weekday.endswith("ar") else weekday
+
+
+def _format_weekday(weekday, plural=False):
+    weekday = weekday.lower()
+    return _pluralize_weekday(weekday) if plural else weekday
+
+
+def _format_weekday_plural(weekday):
+    return _format_weekday(weekday, plural=True)
+
+
+def _get_formatted_arguments(name, location, weekday):
+    return (
+        _format_name(name),
+        _format_location(location),
+        _format_weekday_plural(weekday),
+    )
+
+
 def _strip_weekday_plural(ctx, weekday):
     if weekday is None:
         return None
@@ -204,25 +233,26 @@ def list():
 @click.argument("location", callback=_lowercase)
 @click.argument("weekday", callback=_normalize_weekday)
 def add(name, location, weekday):
+    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(name, location, weekday)
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday)
     for event in schedule:
         if name == event["name"] and location == event["location"] and weekday_number == event["weekday"]:
-            raise click.ClickException(f"{name} på {location} på {weekday}ar finns redan i schemat.")
+            raise click.ClickException(f"{formatted_name} på {formatted_location} på {formatted_weekday} finns redan i schemat.")
 
     group_activity, group_activity_date = _get_upcoming_group_activity(name, location, weekday_number)
     if not group_activity:
         formatted_group_activity_date = _format_date(group_activity_date)
-        raise click.ClickException(f"{name} är inte schemalagt {formatted_group_activity_date} på {location}.")
+        raise click.ClickException(f"{formatted_name} är inte schemalagt {formatted_group_activity_date} på {formatted_location}.")
 
     _set_schedule([*schedule, {"name": name, "location": location, "weekday": weekday_number}])
 
     if location is None:
-        click.echo(f"Lade till {name} på {weekday}ar i schemat.")
+        click.echo(f"Lade till {formatted_name} på {formatted_weekday} i schemat.")
     elif weekday is None:
-        click.echo(f"Lade till {name} på {location} i schemat.")
+        click.echo(f"Lade till {formatted_name} på {formatted_location} i schemat.")
     else:
-        click.echo(f"Lade till {name} på {location} på {weekday}ar i schemat.")
+        click.echo(f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} i schemat.")
 
 
 @friskis.command()
@@ -230,6 +260,7 @@ def add(name, location, weekday):
 @click.argument("location", required=False, callback=_lowercase)
 @click.argument("weekday", required=False, callback=_normalize_weekday)
 def remove(name, location=None, weekday=None):
+    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(name, location, weekday)
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday) if weekday else None
     matches = []
@@ -242,30 +273,30 @@ def remove(name, location=None, weekday=None):
             matches.append(event)
             if len(matches) > 1:
                 if location is None:
-                    raise click.ClickException(f"{name} på {weekday}ar matchade flera gånger i schemat. Prova att ange plats.")
+                    raise click.ClickException(f"{formatted_name} på {formatted_weekday} matchade flera gånger i schemat. Prova att ange plats.")
                 elif weekday is None:
-                    raise click.ClickException(f"{name} på {location} matchade flera gånger i schemat. Prova att ange veckodag.")
+                    raise click.ClickException(f"{formatted_name} på {formatted_location} matchade flera gånger i schemat. Prova att ange veckodag.")
                 else:
-                    raise click.ClickException(f"{name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag.")
+                    raise click.ClickException(f"{formatted_name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag.")
 
     if len(matches) == 0:
         if location is None and weekday is None:
-            raise click.ClickException(f"{name} matchade inte något i schemat.")
+            raise click.ClickException(f"{formatted_name} matchade inte något i schemat.")
         elif weekday is None:
-            raise click.ClickException(f"{name} och {location} matchade inte något i schemat.")
+            raise click.ClickException(f"{formatted_name} och {formatted_location} matchade inte något i schemat.")
         elif location is None:
-            raise click.ClickException(f"{name} och {weekday}ar matchade inte något i schemat.")
+            raise click.ClickException(f"{formatted_name} och {formatted_weekday} matchade inte något i schemat.")
         else:
-            raise click.ClickException(f"{name}, {location} och {weekday}ar matchade inte något i schemat.")
+            raise click.ClickException(f"{formatted_name}, {formatted_location} och {formatted_weekday} matchade inte något i schemat.")
 
     _set_schedule([e for e in schedule if e not in matches])
 
     if location is None:
-        click.echo(f"Tog bort {name} på {weekday}ar ur schemat.")
+        click.echo(f"Tog bort {formatted_name} på {formatted_weekday} ur schemat.")
     elif weekday is None:
-        click.echo(f"Tog bort {name} på {location} ur schemat.")
+        click.echo(f"Tog bort {formatted_name} på {formatted_location} ur schemat.")
     else:
-        click.echo(f"Tog bort {name} på {location} på {weekday}ar ur schemat.")
+        click.echo(f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat.")
 
 
 @friskis.command()
@@ -277,14 +308,15 @@ def book():
         group_activity_name = event["name"]
         group_activity_weekday = event["weekday"]
         location = event["location"]
+        formatted_name, formatted_location = _format_name(group_activity_name), _format_location(location)
 
         group_activity, group_activity_date = _get_upcoming_group_activity(group_activity_name, location, group_activity_weekday)
         formatted_group_activity_date = group_activity_date.isoformat()
         if not group_activity:
-            click.echo(f"{group_activity_name} är inte schemalagt på {location} {formatted_group_activity_date}.")
+            click.echo(f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date}.")
             continue
         if group_activity["cancelled"]:
-            click.echo(f"{group_activity_name} på {location} är inställt {formatted_group_activity_date}")
+            click.echo(f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date}")
 
         bookable_earliest = _parse_datetime(group_activity["bookableEarliest"])
         already_booked = group_activity["id"] in [booking["groupActivity"]["id"] for booking in existing_bookings]
@@ -296,7 +328,7 @@ def book():
         if slots_left == 0:
             waiting_list_length = slots["inWaitingList"]
             click.echo(
-                f"{group_activity_name} på {location} {formatted_group_activity_date} är fullbokat. "
+                f"{formatted_name} på {formatted_location} {formatted_group_activity_date} är fullbokat. "
                 f"Det är {waiting_list_length} {'personer' if waiting_list_length > 1 else 'person'} på reservplats."
             )
             continue
@@ -307,7 +339,7 @@ def book():
 
         group_activity_booking_start = _parse_datetime(group_activity_booking["duration"]["start"])
 
-        click.echo(f"{group_activity_name} på {location} {_format_datetime(group_activity_booking_start)} bokades!")
+        click.echo(f"{formatted_name} på {formatted_location} {_format_datetime(group_activity_booking_start)} bokades!")
 
 
 if __name__ == '__main__':
