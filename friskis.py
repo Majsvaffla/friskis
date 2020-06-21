@@ -273,21 +273,21 @@ def remove(name, location=None, weekday=None):
             matches.append(event)
             if len(matches) > 1:
                 if location is None:
-                    raise click.ClickException(f"{formatted_name} på {formatted_weekday} matchade flera gånger i schemat. Prova att ange plats.")
+                    raise click.ClickException(f"{name} på {weekday} matchade flera gånger i schemat. Prova att ange plats.")
                 elif weekday is None:
-                    raise click.ClickException(f"{formatted_name} på {formatted_location} matchade flera gånger i schemat. Prova att ange veckodag.")
+                    raise click.ClickException(f"{name} på {location} matchade flera gånger i schemat. Prova att ange veckodag.")
                 else:
-                    raise click.ClickException(f"{formatted_name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag.")
+                    raise click.ClickException(f"{name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag.")
 
     if len(matches) == 0:
         if location is None and weekday is None:
-            raise click.ClickException(f"{formatted_name} matchade inte något i schemat.")
+            raise click.ClickException(f"{name} matchade inte något i schemat.")
         elif weekday is None:
-            raise click.ClickException(f"{formatted_name} och {formatted_location} matchade inte något i schemat.")
+            raise click.ClickException(f"{name} och {location} matchade inte något i schemat.")
         elif location is None:
-            raise click.ClickException(f"{formatted_name} och {formatted_weekday} matchade inte något i schemat.")
+            raise click.ClickException(f"{name} och {weekday} matchade inte något i schemat.")
         else:
-            raise click.ClickException(f"{formatted_name}, {formatted_location} och {formatted_weekday} matchade inte något i schemat.")
+            raise click.ClickException(f"{name}, {location} och {weekday} matchade inte något i schemat.")
 
     _set_schedule([e for e in schedule if e not in matches])
 
