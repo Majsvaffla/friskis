@@ -47,7 +47,29 @@ def _format_datetime(dt, delimiter=" ", tz=STOCKHOLM_TIMEZONE, seconds=False):
 
 
 def _strip_weekday_plural(ctx, weekday):
+    if weekday is None:
+        return None
     return weekday[:-2] if weekday.endswith("ar") else weekday
+
+
+def _lowercase(ctx, s):
+    if s is None:
+        return None
+    return s.lower()
+
+
+def _normalize(ctx, s, formatters):
+    if len(formatters) == 0:
+        return s
+    if len(formatters) == 1:
+        return formatters[0](ctx, s)
+    return _normalize(ctx, formatters[0](ctx, s), formatters[1:])
+
+
+def _normalize_weekday(ctx, weekday):
+    if weekday is None:
+        return None
+    return _normalize(ctx, weekday, [_lowercase, _strip_weekday_plural])
 
 
 def _get_weekday_number(weekday):
@@ -178,9 +200,9 @@ def list():
 
 
 @friskis.command()
-@click.argument("name")
-@click.argument("location")
-@click.argument("weekday", callback=_strip_weekday_plural)
+@click.argument("name", callback=_lowercase)
+@click.argument("location", callback=_lowercase)
+@click.argument("weekday", callback=_normalize_weekday)
 def add(name, location, weekday):
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday)
@@ -204,9 +226,9 @@ def add(name, location, weekday):
 
 
 @friskis.command()
-@click.argument("name")
-@click.argument("location", required=False)
-@click.argument("weekday", required=False, callback=_strip_weekday_plural)
+@click.argument("name", callback=_lowercase)
+@click.argument("location", required=False, callback=_lowercase)
+@click.argument("weekday", required=False, callback=_normalize_weekday)
 def remove(name, location=None, weekday=None):
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday) if weekday else None
