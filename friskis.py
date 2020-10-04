@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).parent
 LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login"
 SCHEDULE_PATH = PROJECT_ROOT / ".schedule"
 STOCKHOLM_TIMEZONE = timezone("Europe/Stockholm")
-WEEKDAYS = list(calendar.day_name)
+WEEKDAYS = [day.lower() for day in calendar.day_name]
 
 
 class FriskisException(Exception):
