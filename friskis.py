@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).parent
 LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login"
 SCHEDULE_PATH = PROJECT_ROOT / ".schedule"
 STOCKHOLM_TIMEZONE = timezone("Europe/Stockholm")
-WEEKDAYS = list(calendar.day_name)
+WEEKDAYS = [day.lower() for day in calendar.day_name]
 
 
 class FriskisException(Exception):
@@ -117,16 +117,20 @@ def _get_business_units():
 
 
 def _get_business_unit(name):
-    for business_unit in _get_business_units():
+    business_units = _get_business_units()
+    for business_unit in business_units:
         if business_unit["name"].lower() == name.lower():
             return business_unit
+
+    existing = ', '.join(b['name'] for b in business_units)
+    raise click.ClickException(f"Kunde inte hitta någon plats med det namnet. Hittade följande: {existing}")
 
 
 def _get_group_activities(business_unit, day):
     url = f"{BUSINESS_UNITS_URL}/{business_unit['id']}/groupactivities"
     period_start = datetime.combine(day, time())
     period_end = period_start + timedelta(days=1)
-    
+
     def datetime_to_string(dt):
         return _format_datetime(dt, delimiter="T", tz=utc, seconds=True) +".000Z"
 
