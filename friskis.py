@@ -11,7 +11,7 @@ from pytz import timezone, utc
 
 locale.setlocale(locale.LC_TIME, "sv_SE.UTF-8")
 
-API_ENDPOINT = "https://bokning.linkoping.friskissvettis.se/brponline/api/ver3"
+API_ENDPOINT = "https://friskissvettis.brpsystems.com/brponline/api/ver3"
 BUSINESS_UNITS_URL = f"{API_ENDPOINT}/businessunits"
 LOGIN_URL = f"{API_ENDPOINT}/auth/login"
 PROJECT_ROOT = Path(__file__).parent
