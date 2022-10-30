@@ -170,7 +170,7 @@ def _get_bookings(authorization):
     url = f"{API_ENDPOINT}/customers/{username}/bookings/groupactivities"
     group_activities_response = _authorized_request(requests.get, url, authorization=authorization)
     if group_activities_response.status_code != 200:
-        raise click.ClickException(f"Det gick inte att hämta befintilga bokningar. ({group_activities_response.status_code})")
+        raise click.ClickException(f"Det gick inte att hämta befintliga bokningar. ({group_activities_response.status_code})")
     return group_activities_response.json()
 
 
