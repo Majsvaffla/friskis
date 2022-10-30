@@ -224,8 +224,8 @@ def _book_group_activity(group_activity, authorization):
 def friskis():
     pass
 
-@friskis.command()
-def list():
+@friskis.command("list")
+def list_schedule():
     for event in sorted(_get_schedule(), key=lambda e: e["weekday"]):
         name = event["name"]
         weekday = _get_weekday(event["weekday"])
