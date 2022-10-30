@@ -47,7 +47,7 @@ def _format_datetime(dt, delimiter=" ", tz=STOCKHOLM_TIMEZONE, seconds=False):
 
 
 def _format_name(name):
-    return name.title()
+    return name.title().strip()
 
 
 def _format_location(location):
@@ -151,7 +151,7 @@ def _get_group_activities(business_unit, day):
 def _get_group_activity(name, day, business_unit):
     group_activities = _get_group_activities(business_unit, day)
     for group_activity in group_activities:
-        if group_activity["name"].lower() == name.lower():
+        if group_activity["name"].lower().strip() == name.lower():
             return group_activity
 
 
