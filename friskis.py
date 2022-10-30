@@ -15,8 +15,8 @@ API_ENDPOINT = "https://bokning.linkoping.friskissvettis.se/brponline/api/ver3"
 BUSINESS_UNITS_URL = f"{API_ENDPOINT}/businessunits"
 LOGIN_URL = f"{API_ENDPOINT}/auth/login"
 PROJECT_ROOT = Path(__file__).parent
-LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login"
-SCHEDULE_PATH = PROJECT_ROOT / ".schedule"
+LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login.json"
+SCHEDULE_PATH = PROJECT_ROOT / ".schedule.json"
 STOCKHOLM_TIMEZONE = timezone("Europe/Stockholm")
 WEEKDAYS = [day.lower() for day in calendar.day_name]
 
