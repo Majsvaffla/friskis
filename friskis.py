@@ -101,6 +101,10 @@ def _normalize_weekday(ctx, weekday):
     return _normalize(ctx, weekday, [_lowercase, _strip_weekday_plural])
 
 
+def _format_list_display(ctx, s):
+    return _normalize(ctx, s, [lambda cty, v: v.ljust(16)])
+
+
 def _get_weekday_number(weekday):
     return WEEKDAYS.index(weekday) + 1
 
@@ -225,11 +229,21 @@ def friskis():
     pass
 
 @friskis.command("list")
-def list_schedule():
+@click.pass_context
+def list_schedule(ctx):
     for event in sorted(_get_schedule(), key=lambda e: e["weekday"]):
         name = event["name"]
         weekday = _get_weekday(event["weekday"])
-        click.echo("\t".join([name, event["location"], f"{weekday}ar".title()]))
+        click.echo(
+            "\t\t".join(
+                _format_list_display(ctx, column)
+                for column in  [
+                    name,
+                    event["location"],
+                    f"{weekday}ar".title(),
+                ]
+            )
+        )
 
 
 @friskis.command()
