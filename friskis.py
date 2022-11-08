@@ -1,7 +1,7 @@
 import calendar
 import json
 import locale
-from datetime import date, datetime, timedelta, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 import click
@@ -11,12 +11,12 @@ from pytz import timezone, utc
 
 locale.setlocale(locale.LC_TIME, "sv_SE.UTF-8")
 
-API_ENDPOINT = "https://bokning.linkoping.friskissvettis.se/brponline/api/ver3"
+API_ENDPOINT = "https://friskissvettis.brpsystems.com/brponline/api/ver3"
 BUSINESS_UNITS_URL = f"{API_ENDPOINT}/businessunits"
 LOGIN_URL = f"{API_ENDPOINT}/auth/login"
 PROJECT_ROOT = Path(__file__).parent
-LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login"
-SCHEDULE_PATH = PROJECT_ROOT / ".schedule"
+LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login.json"
+SCHEDULE_PATH = PROJECT_ROOT / ".schedule.json"
 STOCKHOLM_TIMEZONE = timezone("Europe/Stockholm")
 WEEKDAYS = [day.lower() for day in calendar.day_name]
 
@@ -47,7 +47,7 @@ def _format_datetime(dt, delimiter=" ", tz=STOCKHOLM_TIMEZONE, seconds=False):
 
 
 def _format_name(name):
-    return name.title()
+    return name.title().strip()
 
 
 def _format_location(location):
@@ -101,6 +101,10 @@ def _normalize_weekday(ctx, weekday):
     return _normalize(ctx, weekday, [_lowercase, _strip_weekday_plural])
 
 
+def _format_list_display(ctx, s):
+    return _normalize(ctx, s, [lambda cty, v: v.ljust(16)])
+
+
 def _get_weekday_number(weekday):
     return WEEKDAYS.index(weekday) + 1
 
@@ -147,7 +151,7 @@ def _get_group_activities(business_unit, day):
 def _get_group_activity(name, day, business_unit):
     group_activities = _get_group_activities(business_unit, day)
     for group_activity in group_activities:
-        if group_activity["name"].lower() == name.lower():
+        if group_activity["name"].lower().strip() == name.lower():
             return group_activity
 
 
@@ -166,7 +170,7 @@ def _get_bookings(authorization):
     url = f"{API_ENDPOINT}/customers/{username}/bookings/groupactivities"
     group_activities_response = _authorized_request(requests.get, url, authorization=authorization)
     if group_activities_response.status_code != 200:
-        raise click.ClickException(f"Det gick inte att hämta befintilga bokningar. ({group_activities_response.status_code})")
+        raise click.ClickException(f"Det gick inte att hämta befintliga bokningar. ({group_activities_response.status_code})")
     return group_activities_response.json()
 
 
@@ -224,12 +228,22 @@ def _book_group_activity(group_activity, authorization):
 def friskis():
     pass
 
-@friskis.command()
-def list():
+@friskis.command("list")
+@click.pass_context
+def list_schedule(ctx):
     for event in sorted(_get_schedule(), key=lambda e: e["weekday"]):
         name = event["name"]
         weekday = _get_weekday(event["weekday"])
-        click.echo("\t".join([name, event["location"], f"{weekday}ar".title()]))
+        click.echo(
+            "\t\t".join(
+                _format_list_display(ctx, column)
+                for column in  [
+                    name,
+                    event["location"],
+                    f"{weekday}ar".title(),
+                ]
+            )
+        )
 
 
 @friskis.command()
