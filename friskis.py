@@ -19,6 +19,7 @@ LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login.json"
 SCHEDULE_PATH = PROJECT_ROOT / ".schedule.json"
 STOCKHOLM_TIMEZONE = timezone("Europe/Stockholm")
 WEEKDAYS = [day.lower() for day in calendar.day_name]
+DEFAULT_HTTP_TIMEOUT = 5
 
 
 class FriskisException(Exception):
@@ -113,8 +114,16 @@ def _get_weekday(weekday_number):
     return WEEKDAYS[weekday_number - 1]
 
 
+def _http_get(url, *args, timeout=DEFAULT_HTTP_TIMEOUT, **kwargs):
+    return requests.get(url, *args, timeout=timeout, **kwargs)
+    
+
+def _http_post(url, *args, timeout=DEFAULT_HTTP_TIMEOUT, **kwargs):
+    return requests.post(url, *args, timeout=timeout, **kwargs)
+    
+
 def _get_business_units():
-    business_units_response = requests.get(BUSINESS_UNITS_URL)
+    business_units_response = _http_get(BUSINESS_UNITS_URL)
     if business_units_response.status_code != 200:
         raise click.ClickException(f"Det gick inte att hämta platser. ({business_units_response.status_code})")
     return business_units_response.json()
@@ -142,7 +151,7 @@ def _get_group_activities(business_unit, day):
         "period.start": datetime_to_string(period_start),
         "period.end": datetime_to_string(period_end),
     }
-    group_activities_response = requests.get(url, params)
+    group_activities_response = _http_get(url, params)
     if group_activities_response.status_code != 200:
         raise click.ClickException("Det gick inte att hämta schemalagda aktiviteter.")
     return group_activities_response.json()
@@ -168,7 +177,7 @@ def _get_upcoming_group_activity(name, location, weekday_number):
 def _get_bookings(authorization):
     username = authorization["username"]
     url = f"{API_ENDPOINT}/customers/{username}/bookings/groupactivities"
-    group_activities_response = _authorized_request(requests.get, url, authorization=authorization)
+    group_activities_response = _authorized_request(_http_get, url, authorization=authorization)
     if group_activities_response.status_code != 200:
         raise click.ClickException(f"Det gick inte att hämta befintliga bokningar. ({group_activities_response.status_code})")
     return group_activities_response.json()
@@ -193,7 +202,7 @@ def _set_schedule(schedule):
 
 def _login():
     params = _get_login_credentials()
-    login_response = requests.post(LOGIN_URL, json=params)
+    login_response = _http_post(LOGIN_URL, json=params)
     if login_response.status_code == 200:
         return login_response.json()
     elif login_response.status_code == 401:
@@ -218,7 +227,7 @@ def _book_group_activity(group_activity, authorization):
         "groupActivity": group_activity["id"],
         "allowWaitingList": False,
     }
-    attend_group_activity_response = _authorized_request(requests.post, url, json=params, authorization=authorization)
+    attend_group_activity_response = _authorized_request(_http_post, url, json=params, authorization=authorization)
     if attend_group_activity_response.status_code == 201:
         return attend_group_activity_response.json()
     return {}
