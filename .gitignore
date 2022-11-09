@@ -1,3 +1,4 @@
-.login
+.login.json
+.schedule.json
 *.egg-info
 __pycache__
