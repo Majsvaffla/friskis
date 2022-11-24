@@ -2,7 +2,7 @@ import calendar
 import json
 import locale
 import sys
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from pathlib import Path
 
 import click
