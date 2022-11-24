@@ -1,6 +1,7 @@
 import calendar
 import json
 import locale
+import sys
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
@@ -233,6 +234,14 @@ def _book_group_activity(group_activity, authorization):
     return {}
 
 
+def _stdout(message):
+    click.echo(message)
+
+
+def _stderr(message):
+    click.echo(message, file=sys.stderr)
+
+
 @click.group()
 def friskis():
     pass
@@ -319,11 +328,11 @@ def remove(name, location=None, weekday=None):
     _set_schedule([e for e in schedule if e not in matches])
 
     if location is None:
-        click.echo(f"Tog bort {formatted_name} på {formatted_weekday} ur schemat.")
+        _stdout(f"Tog bort {formatted_name} på {formatted_weekday} ur schemat.")
     elif weekday is None:
-        click.echo(f"Tog bort {formatted_name} på {formatted_location} ur schemat.")
+        _stdout(f"Tog bort {formatted_name} på {formatted_location} ur schemat.")
     else:
-        click.echo(f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat.")
+        _stdout(f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat.")
 
 
 @friskis.command()
@@ -340,10 +349,10 @@ def book():
         group_activity, group_activity_date = _get_upcoming_group_activity(group_activity_name, location, group_activity_weekday)
         formatted_group_activity_date = group_activity_date.isoformat()
         if not group_activity:
-            click.echo(f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date}.")
+            _stderr(f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date}.")
             continue
         if group_activity["cancelled"]:
-            click.echo(f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date}")
+            _stderr(f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date}")
 
         bookable_earliest = _parse_datetime(group_activity["bookableEarliest"])
         already_booked = group_activity["id"] in [booking["groupActivity"]["id"] for booking in existing_bookings]
@@ -354,9 +363,9 @@ def book():
         slots_left = slots["leftToBook"]
         if slots_left == 0:
             waiting_list_length = slots["inWaitingList"]
-            click.echo(
+            _stderr(
                 f"{formatted_name} på {formatted_location} {formatted_group_activity_date} är fullbokat. "
-                f"Det är {waiting_list_length} {'personer' if waiting_list_length > 1 else 'person'} på reservplats."
+                f"Det är {waiting_list_length} {'personer' if waiting_list_length > 1 else 'person'} på reservplats.",
             )
             continue
 
@@ -366,7 +375,7 @@ def book():
 
         group_activity_booking_start = _parse_datetime(group_activity_booking["duration"]["start"])
 
-        click.echo(f"{formatted_name} på {formatted_location} {_format_datetime(group_activity_booking_start)} bokades!")
+        _stdout(f"{formatted_name} på {formatted_location} {_format_datetime(group_activity_booking_start)} bokades!")
 
 
 if __name__ == '__main__':
