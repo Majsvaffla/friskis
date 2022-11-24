@@ -347,7 +347,7 @@ def book():
 
         bookable_earliest = _parse_datetime(group_activity["bookableEarliest"])
         already_booked = group_activity["id"] in [booking["groupActivity"]["id"] for booking in existing_bookings]
-        if now < bookable_earliest or already_booked:
+        if now < bookable_earliest or already_booked or now > bookable_earliest + timedelta(days=1):
             continue
 
         slots = group_activity["slots"]
