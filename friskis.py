@@ -167,7 +167,7 @@ def _get_group_activity(name, day, business_unit):
 
 def _get_upcoming_group_activity(name, location, weekday_number):
     today = datetime.now(STOCKHOLM_TIMEZONE).date()
-    group_activity_date = today
+    group_activity_date = today + timedelta(days=1)
     while group_activity_date.isoweekday() != weekday_number:
         group_activity_date += timedelta(days=1)
     business_unit = _get_business_unit(location)
