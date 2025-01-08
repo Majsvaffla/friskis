@@ -326,53 +326,27 @@ def add(name, location, weekday):
 
 @friskis.command()
 @click.argument("name", callback=_lowercase)
-@click.argument("location", required=False, callback=_lowercase)
-@click.argument("weekday", required=False, callback=_normalize_weekday)
-def remove(name, location=None, weekday=None):
+@click.argument("location", callback=_lowercase)
+@click.argument("weekday", callback=_normalize_weekday)
+def remove(name, location, weekday):
     formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
         name, location, weekday
     )
     schedule = _get_schedule()
-    weekday_number = _get_weekday_number(weekday) if weekday else None
+    weekday_number = _get_weekday_number(weekday)
     matches = []
     for event in schedule:
         if (
             name.lower() in event["name"].lower()
-            and location is not None
             and location.lower() == event["location"].lower()
-            and weekday is not None
             and weekday_number == event["weekday"]
         ):
             matches.append(event)
-            if len(matches) > 1:
-                if location is None:
-                    raise click.ClickException(
-                        f"{name} på {weekday} matchade flera gånger i schemat. Prova att ange plats."
-                    )
-                elif weekday is None:
-                    raise click.ClickException(
-                        f"{name} på {location} matchade flera gånger i schemat. Prova att ange veckodag."
-                    )
-                else:
-                    raise click.ClickException(
-                        f"{name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag."
-                    )
 
     if len(matches) == 0:
-        if location is None and weekday is None:
-            raise click.ClickException(f"{name} matchade inte något i schemat.")
-        elif weekday is None:
-            raise click.ClickException(
-                f"{name} och {location} matchade inte något i schemat."
-            )
-        elif location is None:
-            raise click.ClickException(
-                f"{name} och {weekday} matchade inte något i schemat."
-            )
-        else:
-            raise click.ClickException(
-                f"{name}, {location} och {weekday} matchade inte något i schemat."
-            )
+        raise click.ClickException(
+            f"{name}, {location} och {weekday} matchade inte något i schemat."
+        )
 
     _set_schedule([e for e in schedule if e not in matches])
 
