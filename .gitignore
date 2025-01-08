@@ -2,6 +2,7 @@
 .schedule.json
 *.egg-info
 __pycache__
+.venv
 
 # Devenv
 .devenv*
