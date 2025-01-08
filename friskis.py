@@ -16,8 +16,8 @@ API_ENDPOINT = "https://friskissvettis.brpsystems.com/brponline/api/ver3"
 BUSINESS_UNITS_URL = f"{API_ENDPOINT}/businessunits"
 LOGIN_URL = f"{API_ENDPOINT}/auth/login"
 PROJECT_ROOT = Path(__file__).parent
-LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login.json"
-SCHEDULE_PATH = PROJECT_ROOT / ".schedule.json"
+DEFAULT_LOGIN_CREDENTIALS_PATH = PROJECT_ROOT / ".login.json"
+DEFAULT_SCHEDULE_PATH = PROJECT_ROOT / ".schedule.json"
 STOCKHOLM_TIMEZONE = timezone("Europe/Stockholm")
 WEEKDAYS = [day.lower() for day in calendar.day_name]
 DEFAULT_HTTP_TIMEOUT = 5
@@ -74,8 +74,8 @@ def _format_weekday_plural(weekday):
 def _get_formatted_arguments(name, location, weekday):
     return (
         _format_name(name),
-        _format_location(location),
-        _format_weekday_plural(weekday),
+        _format_location(location) if location else None,
+        _format_weekday_plural(weekday) if weekday else None,
     )
 
 
@@ -194,25 +194,25 @@ def _get_bookings(authorization):
     return group_activities_response.json()
 
 
-def _get_login_credentials():
-    with open(LOGIN_CREDENTIALS_PATH) as f:
+def _get_login_credentials(login_credentials_path):
+    with open(login_credentials_path) as f:
         return json.load(f)
 
 
-def _get_schedule():
-    if not SCHEDULE_PATH.exists():
+def _get_schedule(schedule_path):
+    if not Path(schedule_path).exists():
         return []
-    with open(SCHEDULE_PATH) as f:
+    with open(schedule_path) as f:
         return json.load(f)
 
 
-def _set_schedule(schedule):
-    with open(SCHEDULE_PATH, "w") as f:
+def _set_schedule(schedule, schedule_path):
+    with open(schedule_path, "w") as f:
         json.dump(schedule, f)
 
 
-def _login():
-    params = _get_login_credentials()
+def _login(login_credentials_path):
+    params = _get_login_credentials(login_credentials_path)
     login_response = _http_post(LOGIN_URL, json=params)
     if login_response.status_code == 200:
         return login_response.json()
@@ -258,15 +258,28 @@ def _stderr(message):
     click.echo(message, file=sys.stderr)
 
 
+schedule_path_option = click.option(
+    "--schedule-path",
+    required=False,
+    default=DEFAULT_SCHEDULE_PATH,
+)
+login_path_option = click.option(
+    "--login-path",
+    required=False,
+    default=DEFAULT_LOGIN_CREDENTIALS_PATH,
+)
+
+
 @click.group()
 def friskis():
     pass
 
 
 @friskis.command("list")
+@schedule_path_option
 @click.pass_context
-def list_schedule(ctx):
-    for event in sorted(_get_schedule(), key=lambda e: e["weekday"]):
+def list_schedule(ctx, schedule_path):
+    for event in sorted(_get_schedule(schedule_path), key=lambda e: e["weekday"]):
         name = event["name"]
         weekday = _get_weekday(event["weekday"])
         click.echo(
@@ -285,11 +298,12 @@ def list_schedule(ctx):
 @click.argument("name", callback=_lowercase)
 @click.argument("location", callback=_lowercase)
 @click.argument("weekday", callback=_normalize_weekday)
-def add(name, location, weekday):
+@schedule_path_option
+def add(name, location, weekday, schedule_path):
     formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
         name, location, weekday
     )
-    schedule = _get_schedule()
+    schedule = _get_schedule(schedule_path)
     weekday_number = _get_weekday_number(weekday)
     for event in schedule:
         if (
@@ -311,7 +325,8 @@ def add(name, location, weekday):
         )
 
     _set_schedule(
-        [*schedule, {"name": name, "location": location, "weekday": weekday_number}]
+        [*schedule, {"name": name, "location": location, "weekday": weekday_number}],
+        schedule_path,
     )
 
     if location is None:
@@ -328,11 +343,12 @@ def add(name, location, weekday):
 @click.argument("name", callback=_lowercase)
 @click.argument("location", callback=_lowercase)
 @click.argument("weekday", callback=_normalize_weekday)
-def remove(name, location, weekday):
+@schedule_path_option
+def remove(name, schedule_path, location, weekday):
     formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
         name, location, weekday
     )
-    schedule = _get_schedule()
+    schedule = _get_schedule(schedule_path)
     weekday_number = _get_weekday_number(weekday)
     matches = []
     for event in schedule:
@@ -348,7 +364,7 @@ def remove(name, location, weekday):
             f"{name}, {location} och {weekday} matchade inte något i schemat."
         )
 
-    _set_schedule([e for e in schedule if e not in matches])
+    _set_schedule([e for e in schedule if e not in matches], schedule_path)
 
     if location is None:
         _stdout(f"Tog bort {formatted_name} på {formatted_weekday} ur schemat.")
@@ -360,12 +376,14 @@ def remove(name, location, weekday):
         )
 
 
+@login_path_option
+@schedule_path_option
 @friskis.command()
-def book():
+def book(login_path, schedule_path):
     now = datetime.now(STOCKHOLM_TIMEZONE)
-    authorization = _login()
+    authorization = _login(login_path)
     existing_bookings = _get_bookings(authorization)
-    for event in _get_schedule():
+    for event in _get_schedule(schedule_path):
         group_activity_name = event["name"]
         group_activity_weekday = event["weekday"]
         location = event["location"]
