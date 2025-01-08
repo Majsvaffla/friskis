@@ -26,8 +26,10 @@ DEFAULT_HTTP_TIMEOUT = 5
 class FriskisException(Exception):
     pass
 
+
 class Unauthorized(FriskisException):
     pass
+
 
 class FriskisAPIError(FriskisException):
     pass
@@ -117,16 +119,18 @@ def _get_weekday(weekday_number):
 
 def _http_get(url, *args, timeout=DEFAULT_HTTP_TIMEOUT, **kwargs):
     return requests.get(url, *args, timeout=timeout, **kwargs)
-    
+
 
 def _http_post(url, *args, timeout=DEFAULT_HTTP_TIMEOUT, **kwargs):
     return requests.post(url, *args, timeout=timeout, **kwargs)
-    
+
 
 def _get_business_units():
     business_units_response = _http_get(BUSINESS_UNITS_URL)
     if business_units_response.status_code != 200:
-        raise click.ClickException(f"Det gick inte att hämta platser. ({business_units_response.status_code})")
+        raise click.ClickException(
+            f"Det gick inte att hämta platser. ({business_units_response.status_code})"
+        )
     return business_units_response.json()
 
 
@@ -136,8 +140,10 @@ def _get_business_unit(name):
         if business_unit["name"].lower() == name.lower():
             return business_unit
 
-    existing = ', '.join(b['name'] for b in business_units)
-    raise click.ClickException(f"Kunde inte hitta någon plats med det namnet. Hittade följande: {existing}")
+    existing = ", ".join(b["name"] for b in business_units)
+    raise click.ClickException(
+        f"Kunde inte hitta någon plats med det namnet. Hittade följande: {existing}"
+    )
 
 
 def _get_group_activities(business_unit, day):
@@ -146,7 +152,7 @@ def _get_group_activities(business_unit, day):
     period_end = period_start + timedelta(days=1)
 
     def datetime_to_string(dt):
-        return _format_datetime(dt, delimiter="T", tz=utc, seconds=True) +".000Z"
+        return _format_datetime(dt, delimiter="T", tz=utc, seconds=True) + ".000Z"
 
     params = {
         "period.start": datetime_to_string(period_start),
@@ -178,9 +184,13 @@ def _get_upcoming_group_activity(name, location, weekday_number):
 def _get_bookings(authorization):
     username = authorization["username"]
     url = f"{API_ENDPOINT}/customers/{username}/bookings/groupactivities"
-    group_activities_response = _authorized_request(_http_get, url, authorization=authorization)
+    group_activities_response = _authorized_request(
+        _http_get, url, authorization=authorization
+    )
     if group_activities_response.status_code != 200:
-        raise click.ClickException(f"Det gick inte att hämta befintliga bokningar. ({group_activities_response.status_code})")
+        raise click.ClickException(
+            f"Det gick inte att hämta befintliga bokningar. ({group_activities_response.status_code})"
+        )
     return group_activities_response.json()
 
 
@@ -207,8 +217,12 @@ def _login():
     if login_response.status_code == 200:
         return login_response.json()
     elif login_response.status_code == 401:
-        raise click.ClickException("Det gick inte att logga in med angivna inloggningsuppgifter.")
-    raise click.ClickException(f"Det gick inte att logga in. ({login_response.status_code})")
+        raise click.ClickException(
+            "Det gick inte att logga in med angivna inloggningsuppgifter."
+        )
+    raise click.ClickException(
+        f"Det gick inte att logga in. ({login_response.status_code})"
+    )
 
 
 def _authorized_request(request_method, *request_args, authorization, **request_kwargs):
@@ -228,7 +242,9 @@ def _book_group_activity(group_activity, authorization):
         "groupActivity": group_activity["id"],
         "allowWaitingList": False,
     }
-    attend_group_activity_response = _authorized_request(_http_post, url, json=params, authorization=authorization)
+    attend_group_activity_response = _authorized_request(
+        _http_post, url, json=params, authorization=authorization
+    )
     if attend_group_activity_response.status_code == 201:
         return attend_group_activity_response.json()
     return {}
@@ -246,6 +262,7 @@ def _stderr(message):
 def friskis():
     pass
 
+
 @friskis.command("list")
 @click.pass_context
 def list_schedule(ctx):
@@ -255,7 +272,7 @@ def list_schedule(ctx):
         click.echo(
             "\t\t".join(
                 _format_list_display(ctx, column)
-                for column in  [
+                for column in [
                     name,
                     event["location"],
                     f"{weekday}ar".title(),
@@ -269,26 +286,42 @@ def list_schedule(ctx):
 @click.argument("location", callback=_lowercase)
 @click.argument("weekday", callback=_normalize_weekday)
 def add(name, location, weekday):
-    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(name, location, weekday)
+    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
+        name, location, weekday
+    )
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday)
     for event in schedule:
-        if name == event["name"] and location == event["location"] and weekday_number == event["weekday"]:
-            raise click.ClickException(f"{formatted_name} på {formatted_location} på {formatted_weekday} finns redan i schemat.")
+        if (
+            name == event["name"]
+            and location == event["location"]
+            and weekday_number == event["weekday"]
+        ):
+            raise click.ClickException(
+                f"{formatted_name} på {formatted_location} på {formatted_weekday} finns redan i schemat."
+            )
 
-    group_activity, group_activity_date = _get_upcoming_group_activity(name, location, weekday_number)
+    group_activity, group_activity_date = _get_upcoming_group_activity(
+        name, location, weekday_number
+    )
     if not group_activity:
         formatted_group_activity_date = _format_date(group_activity_date)
-        raise click.ClickException(f"{formatted_name} är inte schemalagt {formatted_group_activity_date} på {formatted_location}.")
+        raise click.ClickException(
+            f"{formatted_name} är inte schemalagt {formatted_group_activity_date} på {formatted_location}."
+        )
 
-    _set_schedule([*schedule, {"name": name, "location": location, "weekday": weekday_number}])
+    _set_schedule(
+        [*schedule, {"name": name, "location": location, "weekday": weekday_number}]
+    )
 
     if location is None:
         click.echo(f"Lade till {formatted_name} på {formatted_weekday} i schemat.")
     elif weekday is None:
         click.echo(f"Lade till {formatted_name} på {formatted_location} i schemat.")
     else:
-        click.echo(f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} i schemat.")
+        click.echo(
+            f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} i schemat."
+        )
 
 
 @friskis.command()
@@ -296,34 +329,50 @@ def add(name, location, weekday):
 @click.argument("location", required=False, callback=_lowercase)
 @click.argument("weekday", required=False, callback=_normalize_weekday)
 def remove(name, location=None, weekday=None):
-    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(name, location, weekday)
+    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
+        name, location, weekday
+    )
     schedule = _get_schedule()
     weekday_number = _get_weekday_number(weekday) if weekday else None
     matches = []
     for event in schedule:
         if (
-            name.lower() in event["name"].lower() and
-            location is not None and location.lower() == event["location"].lower() and
-            weekday is not None and weekday_number == event["weekday"]
+            name.lower() in event["name"].lower()
+            and location is not None
+            and location.lower() == event["location"].lower()
+            and weekday is not None
+            and weekday_number == event["weekday"]
         ):
             matches.append(event)
             if len(matches) > 1:
                 if location is None:
-                    raise click.ClickException(f"{name} på {weekday} matchade flera gånger i schemat. Prova att ange plats.")
+                    raise click.ClickException(
+                        f"{name} på {weekday} matchade flera gånger i schemat. Prova att ange plats."
+                    )
                 elif weekday is None:
-                    raise click.ClickException(f"{name} på {location} matchade flera gånger i schemat. Prova att ange veckodag.")
+                    raise click.ClickException(
+                        f"{name} på {location} matchade flera gånger i schemat. Prova att ange veckodag."
+                    )
                 else:
-                    raise click.ClickException(f"{name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag.")
+                    raise click.ClickException(
+                        f"{name} matchade flera gånger i schemat. Prova att ange plats och/eller veckodag."
+                    )
 
     if len(matches) == 0:
         if location is None and weekday is None:
             raise click.ClickException(f"{name} matchade inte något i schemat.")
         elif weekday is None:
-            raise click.ClickException(f"{name} och {location} matchade inte något i schemat.")
+            raise click.ClickException(
+                f"{name} och {location} matchade inte något i schemat."
+            )
         elif location is None:
-            raise click.ClickException(f"{name} och {weekday} matchade inte något i schemat.")
+            raise click.ClickException(
+                f"{name} och {weekday} matchade inte något i schemat."
+            )
         else:
-            raise click.ClickException(f"{name}, {location} och {weekday} matchade inte något i schemat.")
+            raise click.ClickException(
+                f"{name}, {location} och {weekday} matchade inte något i schemat."
+            )
 
     _set_schedule([e for e in schedule if e not in matches])
 
@@ -332,7 +381,9 @@ def remove(name, location=None, weekday=None):
     elif weekday is None:
         _stdout(f"Tog bort {formatted_name} på {formatted_location} ur schemat.")
     else:
-        _stdout(f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat.")
+        _stdout(
+            f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat."
+        )
 
 
 @friskis.command()
@@ -344,19 +395,34 @@ def book():
         group_activity_name = event["name"]
         group_activity_weekday = event["weekday"]
         location = event["location"]
-        formatted_name, formatted_location = _format_name(group_activity_name), _format_location(location)
+        formatted_name, formatted_location = (
+            _format_name(group_activity_name),
+            _format_location(location),
+        )
 
-        group_activity, group_activity_date = _get_upcoming_group_activity(group_activity_name, location, group_activity_weekday)
+        group_activity, group_activity_date = _get_upcoming_group_activity(
+            group_activity_name, location, group_activity_weekday
+        )
         formatted_group_activity_date = group_activity_date.isoformat()
         if not group_activity:
-            _stderr(f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date}.")
+            _stderr(
+                f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date}."
+            )
             continue
         if group_activity["cancelled"]:
-            _stderr(f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date}")
+            _stderr(
+                f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date}"
+            )
 
         bookable_earliest = _parse_datetime(group_activity["bookableEarliest"])
-        already_booked = group_activity["id"] in [booking["groupActivity"]["id"] for booking in existing_bookings]
-        if now < bookable_earliest or already_booked or now > bookable_earliest + timedelta(days=1):
+        already_booked = group_activity["id"] in [
+            booking["groupActivity"]["id"] for booking in existing_bookings
+        ]
+        if (
+            now < bookable_earliest
+            or already_booked
+            or now > bookable_earliest + timedelta(days=1)
+        ):
             continue
 
         slots = group_activity["slots"]
@@ -373,10 +439,14 @@ def book():
         if not group_activity_booking:
             continue
 
-        group_activity_booking_start = _parse_datetime(group_activity_booking["duration"]["start"])
+        group_activity_booking_start = _parse_datetime(
+            group_activity_booking["duration"]["start"]
+        )
 
-        _stdout(f"{formatted_name} på {formatted_location} {_format_datetime(group_activity_booking_start)} bokades!")
+        _stdout(
+            f"{formatted_name} på {formatted_location} {_format_datetime(group_activity_booking_start)} bokades!"
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     friskis()
