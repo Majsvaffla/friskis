@@ -2,11 +2,13 @@
     {
         "weekday": 1,
         "name": "Step explode",
-        "location": "Linköping - City"
+        "location": "Linköping - City",
+        "time": "14:30"
     },
     {
         "weekday": 4,
         "name": "Plaza styrka",
-        "location": "Linköping - Harvestad"
+        "location": "Linköping - Harvestad",
+        "time": "17:00"
     }
 ]
