@@ -74,20 +74,16 @@ def _format_weekday_plural(weekday):
 def _get_formatted_arguments(name, location, weekday):
     return (
         _format_name(name),
-        _format_location(location) if location else None,
-        _format_weekday_plural(weekday) if weekday else None,
+        _format_location(location),
+        _format_weekday_plural(weekday),
     )
 
 
 def _strip_weekday_plural(ctx, weekday):
-    if weekday is None:
-        return None
     return weekday[:-2] if weekday.endswith("ar") else weekday
 
 
 def _lowercase(ctx, s):
-    if s is None:
-        return None
     return s.lower()
 
 
@@ -100,8 +96,6 @@ def _normalize(ctx, s, formatters):
 
 
 def _normalize_weekday(ctx, weekday):
-    if weekday is None:
-        return None
     return _normalize(ctx, weekday, [_lowercase, _strip_weekday_plural])
 
 
@@ -329,14 +323,9 @@ def add(name, location, weekday, schedule_path):
         schedule_path,
     )
 
-    if location is None:
-        click.echo(f"Lade till {formatted_name} på {formatted_weekday} i schemat.")
-    elif weekday is None:
-        click.echo(f"Lade till {formatted_name} på {formatted_location} i schemat.")
-    else:
-        click.echo(
-            f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} i schemat."
-        )
+    click.echo(
+        f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} i schemat."
+    )
 
 
 @friskis.command()
@@ -366,14 +355,9 @@ def remove(name, schedule_path, location, weekday):
 
     _set_schedule([e for e in schedule if e not in matches], schedule_path)
 
-    if location is None:
-        _stdout(f"Tog bort {formatted_name} på {formatted_weekday} ur schemat.")
-    elif weekday is None:
-        _stdout(f"Tog bort {formatted_name} på {formatted_location} ur schemat.")
-    else:
-        _stdout(
-            f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat."
-        )
+    _stdout(
+        f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat."
+    )
 
 
 @login_path_option
