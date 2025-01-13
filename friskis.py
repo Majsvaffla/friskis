@@ -71,11 +71,12 @@ def _format_weekday_plural(weekday):
     return _format_weekday(weekday, plural=True)
 
 
-def _get_formatted_arguments(name, location, weekday):
+def _get_formatted_arguments(name, location, weekday, time):
     return (
         _format_name(name),
         _format_location(location),
         _format_weekday_plural(weekday),
+        time,
     )
 
 
@@ -101,6 +102,10 @@ def _normalize_weekday(ctx, weekday):
 
 def _format_list_display(ctx, s):
     return _normalize(ctx, s, [lambda cty, v: v.ljust(16)])
+
+
+def _datetime_to_time_str(ctx, dt):
+    return str(dt.strftime("%H:%M"))
 
 
 def _get_weekday_number(weekday):
@@ -158,20 +163,27 @@ def _get_group_activities(business_unit, day):
     return group_activities_response.json()
 
 
-def _get_group_activity(name, day, business_unit):
+def _get_group_activity(name, day, business_unit, time):
     group_activities = _get_group_activities(business_unit, day)
     for group_activity in group_activities:
-        if group_activity["name"].lower().strip() == name.lower():
+        has_matching_name = group_activity["name"].lower().strip() == name.lower()
+        has_matching_time = (
+            _parse_datetime(group_activity["duration"]["start"])
+            .astimezone(STOCKHOLM_TIMEZONE)
+            .strftime("%H:%M")
+            == time
+        )
+        if has_matching_name and has_matching_time:
             return group_activity
 
 
-def _get_upcoming_group_activity(name, location, weekday_number):
+def _get_upcoming_group_activity(name, location, weekday_number, time):
     today = datetime.now(STOCKHOLM_TIMEZONE).date()
     group_activity_date = today + timedelta(days=1)
     while group_activity_date.isoweekday() != weekday_number:
         group_activity_date += timedelta(days=1)
     business_unit = _get_business_unit(location)
-    group_activity = _get_group_activity(name, group_activity_date, business_unit)
+    group_activity = _get_group_activity(name, group_activity_date, business_unit, time)
     return group_activity, group_activity_date
 
 
@@ -276,6 +288,7 @@ def list_schedule(ctx, schedule_path):
     for event in sorted(_get_schedule(schedule_path), key=lambda e: e["weekday"]):
         name = event["name"]
         weekday = _get_weekday(event["weekday"])
+        time = event["time"]
         click.echo(
             "\t\t".join(
                 _format_list_display(ctx, column)
@@ -283,6 +296,7 @@ def list_schedule(ctx, schedule_path):
                     name,
                     event["location"],
                     f"{weekday}ar".title(),
+                    f"kl. {time}",
                 ]
             )
         )
@@ -292,10 +306,13 @@ def list_schedule(ctx, schedule_path):
 @click.argument("name", callback=_lowercase)
 @click.argument("location", callback=_lowercase)
 @click.argument("weekday", callback=_normalize_weekday)
+@click.argument(
+    "time", type=click.DateTime(formats=["%H:%M"]), callback=_datetime_to_time_str
+)
 @schedule_path_option
-def add(name, location, weekday, schedule_path):
-    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
-        name, location, weekday
+def add(name, location, weekday, time, schedule_path):
+    formatted_name, formatted_location, formatted_weekday, formatted_time = (
+        _get_formatted_arguments(name, location, weekday, time)
     )
     schedule = _get_schedule(schedule_path)
     weekday_number = _get_weekday_number(weekday)
@@ -304,27 +321,36 @@ def add(name, location, weekday, schedule_path):
             name == event["name"]
             and location == event["location"]
             and weekday_number == event["weekday"]
+            and time == event["time"]
         ):
             raise click.ClickException(
-                f"{formatted_name} på {formatted_location} på {formatted_weekday} finns redan i schemat."
+                f"{formatted_name} på {formatted_location} på {formatted_weekday} kl. {formatted_time} finns redan i schemat."
             )
 
     group_activity, group_activity_date = _get_upcoming_group_activity(
-        name, location, weekday_number
+        name, location, weekday_number, time
     )
     if not group_activity:
         formatted_group_activity_date = _format_date(group_activity_date)
         raise click.ClickException(
-            f"{formatted_name} är inte schemalagt {formatted_group_activity_date} på {formatted_location}."
+            f"{formatted_name} är inte schemalagt {formatted_group_activity_date} kl. {formatted_time} på {formatted_location}."
         )
 
     _set_schedule(
-        [*schedule, {"name": name, "location": location, "weekday": weekday_number}],
+        [
+            *schedule,
+            {
+                "name": name,
+                "location": location,
+                "weekday": weekday_number,
+                "time": time,
+            },
+        ],
         schedule_path,
     )
 
     click.echo(
-        f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} i schemat."
+        f"Lade till {formatted_name} på {formatted_location} på {formatted_weekday} kl. {formatted_time} i schemat."
     )
 
 
@@ -332,10 +358,13 @@ def add(name, location, weekday, schedule_path):
 @click.argument("name", callback=_lowercase)
 @click.argument("location", callback=_lowercase)
 @click.argument("weekday", callback=_normalize_weekday)
+@click.argument(
+    "time", type=click.DateTime(formats=["%H:%M"]), callback=_datetime_to_time_str
+)
 @schedule_path_option
-def remove(name, schedule_path, location, weekday):
-    formatted_name, formatted_location, formatted_weekday = _get_formatted_arguments(
-        name, location, weekday
+def remove(name, schedule_path, location, weekday, time):
+    formatted_name, formatted_location, formatted_weekday, formatted_time = (
+        _get_formatted_arguments(name, location, weekday, time)
     )
     schedule = _get_schedule(schedule_path)
     weekday_number = _get_weekday_number(weekday)
@@ -345,18 +374,19 @@ def remove(name, schedule_path, location, weekday):
             name.lower() in event["name"].lower()
             and location.lower() == event["location"].lower()
             and weekday_number == event["weekday"]
+            and time == event["time"]
         ):
             matches.append(event)
 
     if len(matches) == 0:
         raise click.ClickException(
-            f"{name}, {location} och {weekday} matchade inte något i schemat."
+            f"{name}, {location}, {weekday} och {time} matchade inte något i schemat."
         )
 
     _set_schedule([e for e in schedule if e not in matches], schedule_path)
 
     _stdout(
-        f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} ur schemat."
+        f"Tog bort {formatted_name} på {formatted_location} på {formatted_weekday} kl. {formatted_time} ur schemat."
     )
 
 
@@ -370,6 +400,7 @@ def book(login_path, schedule_path):
     for event in _get_schedule(schedule_path):
         group_activity_name = event["name"]
         group_activity_weekday = event["weekday"]
+        group_activity_time = event["time"]
         location = event["location"]
         formatted_name, formatted_location = (
             _format_name(group_activity_name),
@@ -377,17 +408,17 @@ def book(login_path, schedule_path):
         )
 
         group_activity, group_activity_date = _get_upcoming_group_activity(
-            group_activity_name, location, group_activity_weekday
+            group_activity_name, location, group_activity_weekday, group_activity_time
         )
         formatted_group_activity_date = group_activity_date.isoformat()
         if not group_activity:
             _stderr(
-                f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date}."
+                f"{formatted_name} är inte schemalagt på {formatted_location} {formatted_group_activity_date} kl. {group_activity_time}."
             )
             continue
         if group_activity["cancelled"]:
             _stderr(
-                f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date}"
+                f"{formatted_name} på {formatted_location} är inställt {formatted_group_activity_date} kl. {group_activity_time}"
             )
 
         bookable_earliest = _parse_datetime(group_activity["bookableEarliest"])
@@ -406,7 +437,7 @@ def book(login_path, schedule_path):
         if slots_left == 0:
             waiting_list_length = slots["inWaitingList"]
             _stderr(
-                f"{formatted_name} på {formatted_location} {formatted_group_activity_date} är fullbokat. "
+                f"{formatted_name} på {formatted_location} {formatted_group_activity_date} kl. {group_activity_time} är fullbokat. "
                 f"Det är {waiting_list_length} {'personer' if waiting_list_length > 1 else 'person'} på reservplats.",
             )
             continue
@@ -415,12 +446,8 @@ def book(login_path, schedule_path):
         if not group_activity_booking:
             continue
 
-        group_activity_booking_start = _parse_datetime(
-            group_activity_booking["duration"]["start"]
-        )
-
         _stdout(
-            f"{formatted_name} på {formatted_location} {_format_datetime(group_activity_booking_start)} bokades!"
+            f"{formatted_name} på {formatted_location} {formatted_group_activity_date} kl. {group_activity_time} bokades!"
         )
 
 
