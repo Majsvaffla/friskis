@@ -1,5 +1,4 @@
-.login.json
-.schedule.json
+.profiles
 *.egg-info
 __pycache__
 .venv
