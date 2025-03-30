@@ -1,0 +1,41 @@
+[project]
+authors = [
+  {name = "David Svenson", email = "davidsvenson@outlook.com"},
+]
+name = "friskis"
+
+description = "Automatic booking for Friskis & Svettis"
+version = "0.0.1"
+
+requires-python = ">=3.11"
+
+dependencies = [
+  "httpx>=0.28.1",
+  "pydantic>=2.12.5",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.19.1",
+]
+
+[tool.ruff]
+line-length = 120
+lint.select = [
+  "F",
+  "E",
+  "W",
+  "I",
+  "B",
+  "C4",
+  "TCH",
+  "RUF100",
+  "DTZ",
+  "UP",
+  "TID",
+]
+
+[tool.mypy]
+files = ["friskis"]
+strict = true
+strict_equality = true

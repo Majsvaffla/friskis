@@ -1,0 +1,16 @@
+[Unit]
+Description=Friskis & Svettis daemon
+After=network.target
+
+[Service]
+User=friskis
+Group=friskis
+WorkingDirectory=/opt/friskis
+Environment=PYTHONPATH=.
+Environment=FRISKIS_PROFILES_LOCATION=/etc/friskis/profiles
+EnvironmentFile=/etc/friskis/environment
+ExecStart=uv run /opt/friskis/friskisd.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
