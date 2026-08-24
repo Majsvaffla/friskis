@@ -49,9 +49,9 @@ def deserialize_booking(
     data: RawGroupActivityBooking | RawWaitingListBooking,
 ) -> Booking:
     if data["type"] == "groupActivityBooking":
-        return GroupActivityBooking(**data["groupActivityBooking"])
+        return GroupActivityBooking(**{**data, **data["groupActivityBooking"]})
     if data["type"] == "waitingListBooking":
-        return WaitingListBooking(**data["waitingListBooking"])
+        return WaitingListBooking(**{**data, **data["waitingListBooking"]})
     assert_never(data["type"])
 
 
