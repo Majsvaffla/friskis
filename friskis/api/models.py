@@ -69,7 +69,7 @@ class Booking(BaseModel):
     businessUnit: BusinessUnit
     customer: Customer
     duration: Duration
-    checkedIn: None
+    checkedIn: datetime.datetime | None
 
 
 class GroupActivityBooking(Booking):
