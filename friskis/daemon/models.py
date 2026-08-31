@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel
 
-__all__ = ["Credentials", "ScheduleEntry", "UpcomingGroupActivity"]
+__all__ = ["Credentials", "ScheduleEntry"]
 
 
 class Credentials(BaseModel):
@@ -15,7 +15,3 @@ class ScheduleEntry(BaseModel):
     name: str
     location: str
     time: datetime.time
-
-
-class UpcomingGroupActivity(BaseModel):
-    pass
