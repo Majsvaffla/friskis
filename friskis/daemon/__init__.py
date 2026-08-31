@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import signal
 from argparse import ArgumentParser
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from threading import Event, Thread
 from time import sleep
@@ -14,6 +14,7 @@ from friskis.constants import TZ
 from friskis.utils import logging
 from friskis.utils.logging import logger
 
+from .constants import ACTIVITY_REFRESH_INTERVAL, AUTHORIZATION_REFRESH_INTERVAL
 from .utils import (
     authorize_profile,
     book,
@@ -34,7 +35,7 @@ __all__ = [
 def _run(profile_location: Path, shutdown: Event) -> None:
     authorization = authorize_profile(profile_location)
     activities = initialize_activities(profile_location)
-    last_refresh_at = datetime.now(TZ)
+    last_authorization_refresh_at = last_activity_refresh_at = datetime.now(TZ)
     logger.debug(f"Waiting for upcoming activities for {profile_location.stem}...")
     while not shutdown.is_set():
         for activity in list(activities.values()):
@@ -47,10 +48,12 @@ def _run(profile_location: Path, shutdown: Event) -> None:
                     sleep(60)
         sleep(1)
 
-        if last_refresh_at < datetime.now(TZ) - timedelta(days=1):
+        if last_authorization_refresh_at < datetime.now(TZ) - AUTHORIZATION_REFRESH_INTERVAL:
             authorization = authorize_profile(profile_location)
+            last_authorization_refresh_at = datetime.now(TZ)
+        if last_activity_refresh_at < datetime.now(TZ) - ACTIVITY_REFRESH_INTERVAL:
             activities.update(initialize_activities(profile_location))
-            last_refresh_at = datetime.now(TZ)
+            last_activity_refresh_at = datetime.now(TZ)
 
     logger.debug(f"Stopped waiting for upcoming activities for {profile_location.stem}.")
 
