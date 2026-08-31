@@ -7,3 +7,4 @@ __all__ = [
 ]
 
 PROFILES_LOCATION: Final[Path] = Path(os.environ.get("FRISKIS_PROFILES_LOCATION", default="."))
+BUGSINK_DSN: Final[str] = os.environ.get("BUGSINK_DSN", default="")

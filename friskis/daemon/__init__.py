@@ -17,10 +17,8 @@ from friskis.utils.logging import logger
 from .constants import ACTIVITY_REFRESH_INTERVAL, AUTHORIZATION_REFRESH_INTERVAL
 from .utils import (
     authorize_profile,
-    book,
     initialize_activities,
-    is_bookable,
-    is_time_to_book,
+    wait_for_upcoming_activities,
 )
 
 if TYPE_CHECKING:
@@ -33,31 +31,39 @@ __all__ = [
 
 
 def _run(profile_location: Path, shutdown: Event) -> None:
-    authorization = authorize_profile(profile_location)
-    activities = initialize_activities(profile_location)
-    last_authorization_refresh_at = last_activity_refresh_at = datetime.now(TZ)
-    logger.debug(f"Waiting for upcoming activities for {profile_location.stem}...")
-    while not shutdown.is_set():
-        if not activities:
-            sleep(60)
-            continue
-        for activity in list(activities.values()):
-            if not is_time_to_book(activity):
-                continue
-            if not is_bookable(activity, authorization):
-                del activities[activity.id]
-                continue
-            while book(activity, authorization) == "too_early":
-                sleep(0.02)
-        sleep(1)
-        if last_authorization_refresh_at < datetime.now(TZ) - AUTHORIZATION_REFRESH_INTERVAL:
-            authorization = authorize_profile(profile_location)
-            last_authorization_refresh_at = datetime.now(TZ)
-        if last_activity_refresh_at < datetime.now(TZ) - ACTIVITY_REFRESH_INTERVAL:
-            activities.update(initialize_activities(profile_location))
-            last_activity_refresh_at = datetime.now(TZ)
+    if env.BUGSINK_DSN:
+        import sentry_sdk
 
-    logger.debug(f"Stopped waiting for upcoming activities for {profile_location.stem}.")
+        sentry_sdk.init(
+            env.BUGSINK_DSN,
+            send_default_pii=True,
+            max_request_body_size="always",
+            traces_sample_rate=0,
+            send_client_reports=False,
+            auto_session_tracking=False,
+        )
+
+    while True:
+        try:
+            authorization = authorize_profile(profile_location)
+            activities = initialize_activities(profile_location)
+            last_authorization_refresh_at = last_activity_refresh_at = datetime.now(TZ)
+            logger.debug(f"Waiting for upcoming activities for {profile_location.stem}...")
+            while not shutdown.is_set():
+                wait_for_upcoming_activities(profile_location, shutdown)
+                if last_authorization_refresh_at < datetime.now(TZ) - AUTHORIZATION_REFRESH_INTERVAL:
+                    authorization = authorize_profile(authorization, profile_location)
+                    last_authorization_refresh_at = datetime.now(TZ)
+                if last_activity_refresh_at < datetime.now(TZ) - ACTIVITY_REFRESH_INTERVAL:
+                    activities.update(initialize_activities(profile_location))
+                    last_activity_refresh_at = datetime.now(TZ)
+
+            logger.debug(f"Stopped waiting for upcoming activities for {profile_location.stem}.")
+            break
+        except Exception as e:
+            logger.debug(f"An exception was raised for {profile_location.stem}.")
+            if env.BUGSINK_DSN:
+                sentry_sdk.capture_exception(e)
 
 
 def _launch(profile_locations: Sequence[Path]) -> None:

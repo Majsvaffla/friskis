@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+from threading import Event
+from time import sleep
 from typing import TYPE_CHECKING, Literal
 
 from friskis.api import actions as api
@@ -17,6 +19,8 @@ from friskis.api.models import (
 from friskis.constants import CREDENTIALS_FILE_NAME, SCHEDULE_FILE_NAME, TZ
 from friskis.daemon.models import Credentials, ScheduleEntry
 from friskis.utils.logging import logger
+
+from .constants import ACTIVITY_REFRESH_INTERVAL, AUTHORIZATION_REFRESH_INTERVAL
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -148,3 +152,18 @@ def is_time_to_book(activity: GroupActivity) -> bool:
     is_bookable_soon = activity.bookableEarliest - timedelta(seconds=3) <= now
     is_bookable_since_1_day = activity.bookableEarliest + timedelta(days=1) < now
     return is_bookable_soon and not is_bookable_since_1_day
+
+
+def wait_for_upcoming_activities(authorization: Authorization, activities) -> None:
+    if not activities:
+        sleep(60)
+        return
+    for activity in list(activities.values()):
+        if not is_time_to_book(activity):
+            continue
+        if not is_bookable(activity, authorization):
+            del activities[activity.id]
+            continue
+        while book(activity, authorization) == "too_early":
+            sleep(0.02)
+    sleep(1)
