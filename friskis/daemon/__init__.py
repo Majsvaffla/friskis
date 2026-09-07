@@ -64,6 +64,8 @@ def _run(profile_location: Path, shutdown: Event) -> None:
             logger.debug(f"An exception was raised for {profile_location.stem}.")
             if env.BUGSINK_DSN:
                 sentry_sdk.capture_exception(e)
+            else:
+                raise
 
 
 def _launch(profile_locations: Sequence[Path]) -> None:
