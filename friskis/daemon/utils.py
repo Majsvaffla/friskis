@@ -154,7 +154,7 @@ def is_time_to_book(activity: GroupActivity) -> bool:
     return is_bookable_soon and not is_bookable_since_1_day
 
 
-def wait_for_upcoming_activities(authorization: Authorization, activities) -> None:
+def wait_for_upcoming_activities(authorization: Authorization, activities: dict[int, GroupActivity]) -> None:
     if not activities:
         sleep(60)
         return

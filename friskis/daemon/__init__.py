@@ -50,7 +50,7 @@ def _run(profile_location: Path, shutdown: Event) -> None:
             last_authorization_refresh_at = last_activity_refresh_at = datetime.now(TZ)
             logger.debug(f"Waiting for upcoming activities for {profile_location.stem}...")
             while not shutdown.is_set():
-                wait_for_upcoming_activities(profile_location, shutdown)
+                wait_for_upcoming_activities(authorization, activities)
                 if last_authorization_refresh_at < datetime.now(TZ) - AUTHORIZATION_REFRESH_INTERVAL:
                     authorization = authorize_profile(authorization, profile_location)
                     last_authorization_refresh_at = datetime.now(TZ)
