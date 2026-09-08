@@ -88,12 +88,12 @@ def get_upcoming_activities(
         if activity:
             yield activity
         else:
-            logger.error(f"Activity {entry.name} at {entry.location} {entry.time.isoformat()} is not scheduled.")
+            logger.warning(f"Activity {entry.name} at {entry.location} {entry.time.isoformat()} is not scheduled.")
 
 
 def is_bookable(activity: GroupActivity, authorization: Authorization) -> bool:
     if activity.cancelled:
-        logger.warning(
+        logger.info(
             f"Activity {activity.name} at {activity.businessUnit.name} "
             f"{activity.duration.start.astimezone(TZ).isoformat()} is cancelled.",
         )
@@ -108,7 +108,7 @@ def is_bookable(activity: GroupActivity, authorization: Authorization) -> bool:
                 return False
         elif isinstance(booking, WaitingListBooking):
             if activity.id == booking.groupActivity.id:
-                logger.warning(
+                logger.info(
                     f"{booking.customer.id} is already on the waiting list "
                     f"({booking.waitingListPosition}) for activity {activity.name} at "
                     f"{activity.businessUnit.name} {activity.duration.start.astimezone(TZ).isoformat()}."
@@ -127,7 +127,7 @@ def book(activity: GroupActivity, authorization: Authorization) -> Booking | Not
         )
         return "too_early"
     except BookingClashesWithOtherBooking:
-        logger.error(
+        logger.warning(
             f"Activity {activity.name} at {activity.businessUnit.name} "
             f"{activity.duration.start.astimezone(TZ).isoformat()} clashes "
             f"with other booking for {authorization.username}."
