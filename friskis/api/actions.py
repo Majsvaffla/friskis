@@ -125,6 +125,11 @@ def book_group_activity(activity: GroupActivity, authorization: Authorization) -
                 f"Activity {activity.name} clashes with other booking.",
                 status_code=response.status_code,
             )
+        elif error["errorCode"] == "ALREADY_BOOKED":
+            raise AlreadyBooked(
+                f"Activity {activity.name} is already booked.",
+                status_code=response.status_code,
+            )
     if response.status_code != 201:
         raise APIException(
             f"Unable to book activity {activity.name} at {activity.businessUnit.name} "

@@ -8,7 +8,7 @@ from time import sleep
 from typing import TYPE_CHECKING, Literal
 
 from friskis.api import actions as api
-from friskis.api.exceptions import BookingClashesWithOtherBooking, TooEarlyToBook
+from friskis.api.exceptions import AlreadyBooked, BookingClashesWithOtherBooking, TooEarlyToBook
 from friskis.api.models import (
     Authorization,
     Booking,
@@ -25,7 +25,7 @@ from .constants import ACTIVITY_REFRESH_INTERVAL, AUTHORIZATION_REFRESH_INTERVAL
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    NotBookedReason = Literal["too_early", "clashing_booking"]
+    NotBookedReason = Literal["too_early", "clashing_booking", "already_booked"]
 
 __all__ = [
     "initialize_activities",
@@ -133,6 +133,12 @@ def book(activity: GroupActivity, authorization: Authorization) -> Booking | Not
             f"with other booking for {authorization.username}."
         )
         return "clashing_booking"
+    except AlreadyBooked:
+        logger.info(
+            f"{authorization.username} is already booked for activity {activity.name} at "
+            f"{activity.businessUnit.name} {activity.duration.start.astimezone(TZ).isoformat()}."
+        )
+        return "already_booked"
     else:
         if isinstance(booking, GroupActivityBooking):
             logger.info(
