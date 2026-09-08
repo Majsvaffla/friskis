@@ -9,6 +9,7 @@ from time import sleep
 from typing import TYPE_CHECKING
 
 from friskis import env
+from friskis.api.exceptions import TemporarilyUnavailable
 from friskis.cli.utils import ensure_existing_directory
 from friskis.constants import TZ
 from friskis.utils import logging
@@ -60,6 +61,9 @@ def _run(profile_location: Path, shutdown: Event) -> None:
 
             logger.debug(f"Stopped waiting for upcoming activities for {profile_location.stem}.")
             break
+        except TemporarilyUnavailable:
+            # We'd expect the API to be responsive in a moment.
+            continue
         except Exception as e:
             logger.debug(f"An exception was raised for {profile_location.stem}.")
             if env.BUGSINK_DSN:

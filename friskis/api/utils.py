@@ -12,6 +12,8 @@ from friskis.api.models import (
     WaitingListBooking,
 )
 
+from .exceptions import TemporarilyUnavailable
+
 if TYPE_CHECKING:
 
     class RawGroupActivityBooking(TypedDict):
@@ -39,10 +41,14 @@ def authorized_request(
     headers = {
         "authorization": f"{authorization.token_type} {authorization.access_token}",
     }
-    if method == "GET":
-        return httpx.get(url, headers=headers)
-    else:
-        return httpx.post(url, headers=headers, json=json)
+    try:
+        response = httpx.request(method, url, headers=headers, json=json)
+    except httpx.TransportError as transport_error:
+        raise TemporarilyUnavailable from transport_error
+    if response.status_code >= 500:
+        raise TemporarilyUnavailable from http_error
+    return response
+
 
 
 def deserialize_booking(
