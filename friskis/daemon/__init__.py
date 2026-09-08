@@ -52,7 +52,7 @@ def _run(profile_location: Path, shutdown: Event) -> None:
             while not shutdown.is_set():
                 wait_for_upcoming_activities(authorization, activities)
                 if last_authorization_refresh_at < datetime.now(TZ) - AUTHORIZATION_REFRESH_INTERVAL:
-                    authorization = authorize_profile(authorization, profile_location)
+                    authorization = authorize_profile(profile_location)
                     last_authorization_refresh_at = datetime.now(TZ)
                 if last_activity_refresh_at < datetime.now(TZ) - ACTIVITY_REFRESH_INTERVAL:
                     activities.update(initialize_activities(profile_location))
