@@ -25,6 +25,16 @@ if TYPE_CHECKING:
         waitingListBooking: dict[str, Any]
 
 
+def request(method: Literal["GET", "POST"], url: str, **kwargs: Any) -> httpx.Response:
+    try:
+        response = httpx.request(method, url, **kwargs)
+    except httpx.TransportError as transport_error:
+        raise TemporarilyUnavailable("Temporarily unavailable due to a network error.") from transport_error
+    if response.status_code >= 500:
+        raise TemporarilyUnavailable(f"Temporarily unavailable due to response status code {response.status_code}.")
+    return response
+
+
 @overload
 def authorized_request(method: Literal["GET"], url: str, authorization: Authorization) -> httpx.Response: ...
 
@@ -38,16 +48,9 @@ def authorized_request(
 def authorized_request(
     method: Literal["GET", "POST"], url: str, authorization: Authorization, *, json: dict[str, Any] | None = None
 ) -> httpx.Response:
-    headers = {
+    return request(method, url, json=json, headers={
         "authorization": f"{authorization.token_type} {authorization.access_token}",
-    }
-    try:
-        response = httpx.request(method, url, headers=headers, json=json)
-    except httpx.TransportError as transport_error:
-        raise TemporarilyUnavailable from transport_error
-    if response.status_code >= 500:
-        raise TemporarilyUnavailable from http_error
-    return response
+    })
 
 
 

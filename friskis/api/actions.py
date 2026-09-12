@@ -15,13 +15,13 @@ from friskis.api.models import (
     Customer,
     GroupActivity,
 )
-from friskis.api.utils import authorized_request, deserialize_booking
+from friskis.api.utils import authorized_request, deserialize_booking, request
 from friskis.constants import TZ
 from friskis.exceptions import FriskisException
 
 
 def log_in(*, email: str, password: str) -> Authorization:
-    response = httpx.post(LOGIN_URL, json={"username": email, "password": password})
+    response = request("POST", LOGIN_URL, json={"username": email, "password": password})
     if response.status_code == 200:
         return Authorization(**response.json())
     raise APIException(
@@ -55,7 +55,7 @@ def get_bookings(authorization: Authorization) -> list[Booking]:
 
 
 def _get_business_units() -> list[BusinessUnit]:
-    response = httpx.get(BUSINESS_UNITS_URL)
+    response = request("GET", BUSINESS_UNITS_URL)
     if response.status_code != 200:
         raise APIException(
             "Unable to fetch business units.",
@@ -87,7 +87,7 @@ def _get_group_activities(location: BusinessUnit, day: date) -> list[GroupActivi
         "period.start": datetime_to_string(period_start),
         "period.end": datetime_to_string(period_end),
     }
-    response = httpx.get(url, params=params)
+    response = request("GET", url, params=params)
     if response.status_code != 200:
         raise APIException(
             f"Unable to fetch group activities at {location.name}.",
