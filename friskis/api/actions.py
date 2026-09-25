@@ -114,7 +114,7 @@ def book_group_activity(activity: GroupActivity, authorization: Authorization) -
     }
     response = authorized_request("POST", url, json=params, authorization=authorization)
     if response.status_code == 403 and (error := response.json()):
-        if error["errorCode"] == "TOO_EARLY_TOO_BOOK":
+        if error["errorCode"] == "TOO_EARLY_TO_BOOK":
             bookable_earliest = datetime.fromisoformat(error["earliestTimepoint"])
             raise TooEarlyToBook(
                 f"Activity {activity.name} can't be booked until {bookable_earliest}.",
